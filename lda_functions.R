@@ -46,7 +46,7 @@ GenerateLDA <- function(alpha, beta, xi, Vocab, Ndoc){
 
 
 # This function is wrong!!!!
-# Should be seperate gamma and psi for each document!!!
+# Should be seperate gamma and phi for each document!!!
 VariationalExpectation <- function(alpha, beta, epsilon = 0.1){
   # function to cary out variational inference as described in Blei (pg's 1001-1005)
   # Expectation step of EM alg
@@ -56,22 +56,22 @@ VariationalExpectation <- function(alpha, beta, epsilon = 0.1){
   n_topics <- nrow(beta)
   n_words <- ncol(beta)
   alpha <- rep(alpha, n_topics)  # Using fixed alpha...can be easily changed
-  psi <- psi_new <- array(1/n_topics, c(n_topics, n_words))
+  phi <- phi_new <- array(1/n_topics, c(n_topics, n_words))
   gamma <- gamma_new <- alpha + (n_words/n_topics)
   conv_test <- epsilon + 1
 
   while(conv_test > epsilon){
     for(n in 1:n_words)
       for(i in 1:n_topics)
-        psi_new[i,n] <- beta[i,n] * exp(digamma(gamma[i]))  # update psi
-      psi_new <- psi_new / colSums(psi_new)  # normalise psi
-      gamma_new <- alpha + rowSums(psi_new)  # update gamma
+        phi_new[i,n] <- beta[i,n] * exp(digamma(gamma[i]))  # update phi
+      phi_new <- phi_new / colSums(phi_new)  # normalise phi
+      gamma_new <- alpha + rowSums(phi_new)  # update gamma
 
-      conv_test <- max(c(abs(gamma - gamma_new),abs(psi - psi_new)))  # check for convergence
+      conv_test <- max(c(abs(gamma - gamma_new),abs(phi - phi_new)))  # check for convergence
       gamma <- gamma_new
-      psi <- psi_new
+      phi <- phi_new
   }
-  list(gamma, psi)
+  list(gamma, phi)
 }
 
 
@@ -94,22 +94,22 @@ VariationalExpectationFull <- function(alpha, beta, dtm, epsilon = 0.1){
     n_words <- sum(dtm[d,]!=0)  # number of unique words
     alpha_temp <- alpha
     beta_temp <- array(beta[,which(dtm[d,]!=0)] ,c(n_topics,n_words))
-    psi <- psi_new <- array(1/n_topics, c(n_topics, n_words))
+    phi <- phi_new <- array(1/n_topics, c(n_topics, n_words))
     gamma <- gamma_new <- alpha_temp + (n_words/n_topics)
     conv_test <- epsilon + 1
 
     while(conv_test > epsilon){
       for(n in 1:n_words)
         for(i in 1:n_topics)
-          psi_new[i,n] <- beta_temp[i,n] * exp(digamma(gamma[i]))  # update psi
-        psi_new <- psi_new / colSums(psi_new)  # normalise psi
-        gamma_new <- alpha_temp + rowSums(psi_new)  # update gamma
+          phi_new[i,n] <- beta_temp[i,n] * exp(digamma(gamma[i]))  # update phi
+        phi_new <- phi_new / colSums(phi_new)  # normalise phi
+        gamma_new <- alpha_temp + rowSums(phi_new)  # update gamma
       
-        conv_test <- max(c(abs(gamma - gamma_new), abs(psi - psi_new)))  # check for convergence
+        conv_test <- max(c(abs(gamma - gamma_new), abs(phi - phi_new)))  # check for convergence
         gamma <- gamma_new
-        psi <- psi_new
+        phi <- phi_new
     }
-    output[[d]]<-list(gamma = gamma, psi = psi)
+    output[[d]]<-list(gamma = gamma, phi = phi)
   }
   close(pb)
   output
@@ -119,14 +119,14 @@ VariationalExpectationFull <- function(alpha, beta, dtm, epsilon = 0.1){
 VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   # Function to carry out maximization step of Blei
   # arguments:
-  #   gamma and psi, the two variational parameters
+  #   gamma and phi, the two variational parameters
   #   dtm, document term matrix, where d,nth entry is 1 if word n is in document d (not sure about multiple words in the same doc)
 
-  n_topics <- nrow(variational_para[[1]]$psi)
+  n_topics <- nrow(variational_para[[1]]$phi)
   beta <- array(0, c(n_topics, ncol(dtm)))
   for(d in 1:length(variational_para)){
     for(i in 1:n_topics)
-      beta[i,which(dtm[d,]!=0)] <- beta[i,which(dtm[d,]!=0)] + variational_para[[d]]$psi[i,]  # * dtm[d,which(dtm[d,]!=0)])
+      beta[i,which(dtm[d,]!=0)] <- beta[i,which(dtm[d,]!=0)] + variational_para[[d]]$phi[i,]  # * dtm[d,which(dtm[d,]!=0)])
   }
   
   alpha <- rep(0.1, n_topics)  # initialise alpha
