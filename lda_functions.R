@@ -29,14 +29,15 @@ generate_lda <- function(alpha, beta, xi, Vocab, Ndoc){
 
   for(i in 1:Ndoc){
     N <- rpois(1, lambda = xi)  # Choose the length of the ith doc
-    theta <- rdirichlet(n=1, alpha = alpha)
+    theta <- rdirichlet(n = 1, alpha = alpha)
+    
     z <- rmultinom(1, 1, prob = theta)
-    phi <- rdirichlet(n=1, alpha = beta[z,])
+    phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])
     w[[i]] <- Vocab[which(rmultinom(1, 1, prob = phi) == 1)]  # Initialise the ith item in the list w
     
     for(j in 1:N){
       z <- rmultinom(1, 1, prob = theta)
-      phi <- rdirichlet(n=1, alpha = beta[z,])
+      phi <- rdirichlet(n=1, alpha = beta[which(z ==1),])
       w[[i]] <- c(w[[i]], Vocab[which(rmultinom(1, 1, prob = phi) == 1)])
     }
   }
@@ -53,13 +54,13 @@ my_vocab <- c("car", "engine", "exhaust", "wheel",
 
 n_topics <- 3
 
-my_beta <- matrix(c(1, 1, 1, 1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                    0.1, 0.1, 0.1, 0.1, 1, 1, 1, 1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                    0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1, 1, 1, 1, 1, 1, 1), 
+my_beta <- matrix(c(10, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                    0.1, 0.1, 0.1, 0.1, 10, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                    0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 10, 10, 10, 10, 10, 10, 10), 
                   byrow = T, nrow = n_topics, ncol = length(my_vocab))
 
-my_corpus <- generate_lda(alpha = 1, beta = my_beta, xi = 3, Vocab = my_vocab, Ndoc = 6)
-
+my_corpus <- generate_lda(alpha = 0.1, beta = my_beta, xi = 4, Vocab = my_vocab, Ndoc = 6)
+my_corpus
 
 
 
