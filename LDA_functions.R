@@ -31,12 +31,12 @@ GenerateLDA <- function(alpha, beta, xi, Vocab, Ndoc){
     N <- rpois(1, lambda = xi)  # Choose the length of the ith doc
     theta <- rdirichlet(n = 1, alpha = alpha)
     
-    z <- rmultinom(1, 1, prob = theta)
+    z <- rmultinom(1, 1, prob = theta)  # Choose a topic for 1st word in doc i
     phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])
     w[[i]] <- Vocab[which(rmultinom(1, 1, prob = phi) == 1)]  # Initialise the ith item in the list w
     
     for(j in 1:N){
-      z <- rmultinom(1, 1, prob = theta)
+      z <- rmultinom(1, 1, prob = theta)  
       phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])
       w[[i]] <- c(w[[i]], Vocab[which(rmultinom(1, 1, prob = phi) == 1)])
     }
