@@ -130,21 +130,21 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   }
   
   alpha <- rep(0.1, n_topics)  # initialise alpha
-#   conv_test <- 1
-#   while(conv_test > epsilon){
-#     g <- length(variational_para) * (digamma(sum(alpha)) - digamma(alpha)) + 
-#       colSums(matrix(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(sum(x$gamma)))), 
-#                      ncol = n_topics, byrow = T))
-#   # alpha_dash_dash <- diag(length(variational_para) * trigamma(alpha)) - array(trigamma(sum(alpha)), c(n_topics, n_topics))
-#     z <- trigamma(sum(alpha))
-#     h <- length(variational_para) * trigamma(alpha)
-#     c <- sum(g / h) / (1 / z + sum(1 / h))
-#     H_inv <- (g - c)/h
-#     conv_test <- max(abs(H_inv))
-#     if(is.na(conv_test))
-#       browser()
-#     alpha <- alpha - H_inv
-#   }
+  conv_test <- 1
+  while(conv_test > epsilon){
+    g <- length(variational_para) * (digamma(sum(alpha)) - digamma(alpha)) + 
+      colSums(matrix(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(sum(x$gamma)))), 
+                     ncol = n_topics, byrow = T))
+  # alpha_dash_dash <- diag(length(variational_para) * trigamma(alpha)) - array(trigamma(sum(alpha)), c(n_topics, n_topics))
+    z <- trigamma(sum(alpha))
+    h <- length(variational_para) * trigamma(alpha)
+    c <- sum(g / h) / (1 / z + sum(1 / h))
+    H_inv <- (g - c)/h
+    conv_test <- max(abs(H_inv))
+    if(is.na(conv_test))
+      browser()
+    alpha <- alpha - H_inv
+  }
   list(alpha = alpha, beta = beta)
 }
 
