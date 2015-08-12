@@ -134,29 +134,7 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   for(d in 1:nrow(dtm)){
     # debugging: I'm happy with this update of beta being correct!
     for(i in 1:n_topics)
-<<<<<<< HEAD
       beta[i,which(dtm[d,]!=0)] <- beta[i,which(dtm[d,]!=0)] + exp(variational_para[[d]]$phi[i,])  # * dtm[d,which(dtm[d,]!=0)])
-  }
-  
-  alpha <- rep(0.1, n_topics)  # initialise alpha
-  log_alpha <- log(alpha)
-  conv_test <- 1
-  gradient_constant <- colSums(matrix(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(sum(x$gamma)))), ncol = n_topics, byrow = T))
-  while(conv_test > epsilon){
-    # For the following Newton-Rhapson algorithm see pages 1018-1022 in Blei
-    # g is the gradient, z and h relate to the Hessian, all on page 1022
-    # H_inv is from a formula on pages 1018/1019
-    
-    g <- length(variational_para) * (digamma(sum(alpha)) - digamma(alpha)) + gradient_constant
-      
-    
-    z <- trigamma(sum(alpha))
-    h <- length(variational_para) * trigamma(alpha)
-    c <- sum(g / h) / (1 / z + sum(1 / h))
-    H_inv <- (g - c) / h
-    conv_test <- max(abs(H_inv))
-=======
-      beta[i,which(dtm[d,] != 0)] <- beta[i, which(dtm[d,] != 0)] + exp(variational_para[[d]]$phi[i,])  # * dtm[d,which(dtm[d,]!=0)])
   }
   
   alpha <- 0.1  # initialise alpha
@@ -167,18 +145,14 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   while(conv_test > epsilon){
     # the following Newton-Rhapson was taken from source code relating to Blei paper
     # g is the gradient
-    # H is hte Hessian
->>>>>>> alpha
+    # H is the Hessian
     
     g <- (nrow(dtm) * (digamma(n_topics * alpha) - digamma(alpha))) + gradient_constant
     H <- nrow(dtm) * (n_topics^2 * digamma(n_topics * alpha) - n_topics * digamma(alpha))
     
-<<<<<<< HEAD
-    log_alpha <- log_alpha - H_inv
-=======
     log_alpha <- log_alpha - g/(H * alpha + g);
     conv_test <- abs(alpha - exp(log_alpha))
->>>>>>> alpha
+
     alpha <- exp(log_alpha)
   }
   list(alpha = alpha, beta = beta)
