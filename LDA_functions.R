@@ -132,30 +132,32 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   beta <- array(0, c(n_topics, ncol(dtm)))
   for(d in 1:length(variational_para)){
     for(i in 1:n_topics)
-      beta[i,which(dtm[d,]!=0)] <- beta[i,which(dtm[d,]!=0)] + variational_para[[d]]$phi[i,]  # * dtm[d,which(dtm[d,]!=0)])
+      beta[i,which(dtm[d,]!=0)] <- beta[i,which(dtm[d,]!=0)] + exp(variational_para[[d]]$phi[i,])  # * dtm[d,which(dtm[d,]!=0)])
   }
   
   alpha <- rep(0.1, n_topics)  # initialise alpha
+  log_alpha <- log(alpha)
   conv_test <- 1
+  gradient_constant <- colSums(matrix(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(sum(x$gamma)))), ncol = n_topics, byrow = T))
   while(conv_test > epsilon){
     # For the following Newton-Rhapson algorithm see pages 1018-1022 in Blei
     # g is the gradient, z and h relate to the Hessian, all on page 1022
     # H_inv is from a formula on pages 1018/1019
     
-    g <- length(variational_para) * (digamma(sum(alpha)) - digamma(alpha)) + 
-      colSums(matrix(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(sum(x$gamma)))), 
-                     ncol = n_topics, byrow = T))
+    g <- length(variational_para) * (digamma(sum(alpha)) - digamma(alpha)) + gradient_constant
+      
     
     z <- trigamma(sum(alpha))
     h <- length(variational_para) * trigamma(alpha)
     c <- sum(g / h) / (1 / z + sum(1 / h))
-    H_inv <- (g - c)/h
+    H_inv <- (g - c) / h
     conv_test <- max(abs(H_inv))
     
     if(is.na(conv_test))  # debugging
       browser()
     
-    alpha <- alpha - H_inv
+    log_alpha <- log_alpha - H_inv
+    alpha <- exp(log_alpha)
   }
   list(alpha = alpha, beta = beta)
 }
