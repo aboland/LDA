@@ -143,9 +143,9 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   gradient_constant <- sum(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(n_topics * x$gamma))))
   
   while(conv_test > epsilon){
-    # For the following Newton-Rhapson algorithm see pages 1018-1022 in Blei
-    # g is the gradient, z and h relate to the Hessian, all on page 1022
-    # H_inv is from a formula on pages 1018/1019
+    # the following Newton-Rhapson was taken from source code relating to Blei paper
+    # g is the gradient
+    # H is hte Hessian
     
     g <- (nrow(dtm) * (digamma(n_topics * alpha) - digamma(alpha))) + gradient_constant
     H <- nrow(dtm) * (n_topics^2 * digamma(n_topics * alpha) - n_topics * digamma(alpha))
@@ -167,11 +167,15 @@ EM_LDA <- function(dtm, n_topics = 2, epsilon = 0.1){
   n_terms <- ncol(dtm)
   maximum <- list(alpha = 0.1,
                   beta = array(0.1,c(n_topics, n_terms)))
+  conv_test <- epsilon + 1
   
-  for(i in 1:20){
-    # for loop while debugging, should be changed to convergence test
+  while(conv_test > epsilon){
+    # E-M steps
     expect <- VariationalExpectationFull(alpha = maximum$alpha, beta = maximum$beta, dtm = dtm, epsilon = epsilon)
-    maximum <- VariationalMaximization(variational_para = expect, dtm = dtm, epsilon = epsilon)
+    maximum_new <- VariationalMaximization(variational_para = expect, dtm = dtm, epsilon = epsilon)
+    
+    conv_test <- max(c(abs(maximum$alpha - maximum_new$alpha), abs(maximum$beta - maximum_new$beta)))
+    maximum <- maximum_new
     cat("alpha:",maximum$alpha,"\tmax beta:",max(maximum$beta),"\n")  # Debugging
   }
   list(alpha = maximum$alpha, beta = maximum$beta)
