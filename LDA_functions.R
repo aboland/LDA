@@ -94,9 +94,9 @@ VariationalExpectationFull <- function(alpha, beta, dtm, epsilon = 0.1){
   n_docs <- nrow(dtm)
   output <- list()
   
-  pb <- txtProgressBar(min = 0, max = n_docs, style = 3)  # progress bar
+  #pb <- txtProgressBar(min = 0, max = n_docs, style = 3)  # progress bar
   for(d in 1:n_docs){
-    setTxtProgressBar(pb, d)
+    #setTxtProgressBar(pb, d)
     n_words <- sum(dtm[d,] != 0)  # number of unique words
     alpha_temp <- alpha
     beta_temp <- array(beta[,which(dtm[d,] != 0)] ,c(n_topics,n_words))  # cut beta to only contain the columns for the words in doc d
@@ -118,7 +118,7 @@ VariationalExpectationFull <- function(alpha, beta, dtm, epsilon = 0.1){
     }
     output[[d]] <- list(gamma = gamma, phi = phi)
   }
-  close(pb)
+  #close(pb)
   output
 }
 
@@ -134,7 +134,7 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   for(d in 1:nrow(dtm)){
     # debugging: I'm happy with this update of beta being correct!
     for(i in 1:n_topics)
-      beta[i,which(dtm[d,] != 0)] <- beta[i, which(dtm[d,] != 0)] + variational_para[[d]]$phi[i,]  # * dtm[d,which(dtm[d,]!=0)])
+      beta[i,which(dtm[d,] != 0)] <- beta[i, which(dtm[d,] != 0)] + exp(variational_para[[d]]$phi[i,])  # * dtm[d,which(dtm[d,]!=0)])
   }
   
   alpha <- 0.1  # initialise alpha
@@ -148,22 +148,10 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
     # H_inv is from a formula on pages 1018/1019
     
     g <- (nrow(dtm) * (digamma(n_topics * alpha) - digamma(alpha))) + gradient_constant
-      
-    # debugging: is the following section correct...
-    # alpha'' is equal to delta(i,j) * M * trigama(alpha_i) - trigamma(sum(alpha_i))
-    # want the Hessian to be of the form diag(h) - 1z1^T (ie block matrix of z)
-    # 
-    z <- trigamma(n_topics * alpha)
-    h <- nrow(dtm) * trigamma(alpha)
-    c <- sum(g / h) / ((1 / z) + sum(1 / h))  # added in parinthesis to ensure correct
-    H_inv_g <- (g - c)/h  # formula bottom of page 1018
-    conv_test <- max(abs(H_inv_g))
-    
     H <- nrow(dtm) * (n_topics^2 * digamma(n_topics * alpha) - n_topics * digamma(alpha))
     
     log_alpha <- log_alpha - g/(H * alpha + g);
-    
-    #log_alpha <- log_alpha - H_inv_g
+    conv_test <- abs(alpha - exp(log_alpha))
     alpha <- exp(log_alpha)
   }
   list(alpha = alpha, beta = beta)
@@ -184,7 +172,7 @@ EM_LDA <- function(dtm, n_topics = 2, epsilon = 0.1){
     # for loop while debugging, should be changed to convergence test
     expect <- VariationalExpectationFull(alpha = maximum$alpha, beta = maximum$beta, dtm = dtm, epsilon = epsilon)
     maximum <- VariationalMaximization(variational_para = expect, dtm = dtm, epsilon = epsilon)
-    print(max(maximum$beta))  # Debugging
+    cat("alpha:",maximum$alpha,"\tmax beta:",max(maximum$beta),"\n")  # Debugging
   }
   list(alpha = maximum$alpha, beta = maximum$beta)
 }
