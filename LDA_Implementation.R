@@ -35,11 +35,11 @@ library(tm)
 my_corpus
 my_dtm <- as.array(DocumentTermMatrix(Corpus(VectorSource(my_corpus))))
 # need to check my_dtm, as some words may not be in any of the generated documents....
-dim(my_dtm)
+dim(my_dtm) # should have 15 columns!!!
 
 expect <- VariationalExpectationFull(alpha=rep(0.1, 3), beta = my_beta, dtm = my_dtm, epsilon = 0.1)
 
 maximum <- VariationalMaximization(variational_para = expect, dtm = my_dtm)
 
 combined <- EM_LDA(my_dtm, n_topics = 3, epsilon = 0.1)
-
+maximum

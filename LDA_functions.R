@@ -107,9 +107,10 @@ VariationalExpectationFull <- function(alpha, beta, dtm, epsilon = 0.1){
     while(conv_test > epsilon){
       for(n in 1:n_words)
         for(i in 1:n_topics)
-          phi_new[i,n] <- beta_temp[i,n] * exp(digamma(gamma[i]))  # update phi
+          phi_new[i,n] <- beta_temp[i,n] * exp(digamma(gamma))  # update phi
         phi_new <- phi_new / colSums(phi_new)  # normalise phi
-        gamma_new <- alpha_temp + rowSums(phi_new)  # update gamma
+        gamma_new <- alpha_temp + rowSums(phi_new)[1]  # update gamma, not sure how to handle fixed alpha here.....
+        #cat("\n",rowSums(phi_new),"\n")
       
         conv_test <- max(c(abs(gamma - gamma_new), abs(phi - phi_new)))  # check for convergence
         gamma <- gamma_new
@@ -130,32 +131,40 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
 
   n_topics <- nrow(variational_para[[1]]$phi)
   beta <- array(0, c(n_topics, ncol(dtm)))
-  for(d in 1:length(variational_para)){
+  for(d in 1:nrow(dtm)){
+    # debugging: I'm happy with this update of beta being correct!
     for(i in 1:n_topics)
-      beta[i,which(dtm[d,]!=0)] <- beta[i,which(dtm[d,]!=0)] + variational_para[[d]]$phi[i,]  # * dtm[d,which(dtm[d,]!=0)])
+      beta[i,which(dtm[d,] != 0)] <- beta[i, which(dtm[d,] != 0)] + variational_para[[d]]$phi[i,]  # * dtm[d,which(dtm[d,]!=0)])
   }
   
-  alpha <- rep(0.1, n_topics)  # initialise alpha
+  alpha <- 0.1  # initialise alpha
+  log_alpha <- log(alpha)
   conv_test <- 1
+  gradient_constant <- sum(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(n_topics * x$gamma))))
+  
   while(conv_test > epsilon){
     # For the following Newton-Rhapson algorithm see pages 1018-1022 in Blei
     # g is the gradient, z and h relate to the Hessian, all on page 1022
     # H_inv is from a formula on pages 1018/1019
     
-    g <- length(variational_para) * (digamma(sum(alpha)) - digamma(alpha)) + 
-      colSums(matrix(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(sum(x$gamma)))), 
-                     ncol = n_topics, byrow = T))
+    g <- (nrow(dtm) * (digamma(n_topics * alpha) - digamma(alpha))) + gradient_constant
+      
+    # debugging: is the following section correct...
+    # alpha'' is equal to delta(i,j) * M * trigama(alpha_i) - trigamma(sum(alpha_i))
+    # want the Hessian to be of the form diag(h) - 1z1^T (ie block matrix of z)
+    # 
+    z <- trigamma(n_topics * alpha)
+    h <- nrow(dtm) * trigamma(alpha)
+    c <- sum(g / h) / ((1 / z) + sum(1 / h))  # added in parinthesis to ensure correct
+    H_inv_g <- (g - c)/h  # formula bottom of page 1018
+    conv_test <- max(abs(H_inv_g))
     
-    z <- trigamma(sum(alpha))
-    h <- length(variational_para) * trigamma(alpha)
-    c <- sum(g / h) / (1 / z + sum(1 / h))
-    H_inv <- (g - c)/h
-    conv_test <- max(abs(H_inv))
+    H <- nrow(dtm) * (n_topics^2 * digamma(n_topics * alpha) - n_topics * digamma(alpha))
     
-    if(is.na(conv_test))  # debugging
-      browser()
+    log_alpha <- log_alpha - g/(H * alpha + g);
     
-    alpha <- alpha - H_inv
+    #log_alpha <- log_alpha - H_inv_g
+    alpha <- exp(log_alpha)
   }
   list(alpha = alpha, beta = beta)
 }
@@ -168,8 +177,8 @@ EM_LDA <- function(dtm, n_topics = 2, epsilon = 0.1){
   #   epsilon, parameter for convergence, smaller = stricter
   
   n_terms <- ncol(dtm)
-  maximum <- list(alpha = rep(0.1, n_topics),
-                  beta = array(0.5,c(n_topics, n_terms)))
+  maximum <- list(alpha = 0.1,
+                  beta = array(0.1,c(n_topics, n_terms)))
   
   for(i in 1:20){
     # for loop while debugging, should be changed to convergence test
