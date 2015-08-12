@@ -150,10 +150,9 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
     g <- (nrow(dtm) * (digamma(n_topics * alpha) - digamma(alpha))) + gradient_constant
     H <- nrow(dtm) * (n_topics^2 * digamma(n_topics * alpha) - n_topics * digamma(alpha))
     
-    log_alpha <- log_alpha - g/(H * alpha + g);
+    log_alpha <- log_alpha - g/(H * alpha + g)
     conv_test <- abs(alpha - exp(log_alpha))
-
-    alpha <- exp(log_alpha)
+    alpha <- exp(log_alpha)  # update alpha
   }
   list(alpha = alpha, beta = beta)
 }
