@@ -1,4 +1,5 @@
 # History files
+.RData
 .Rhistory
 .Rapp.history
 
@@ -12,3 +13,6 @@
 vignettes/*.html
 vignettes/*.pdf
 .Rproj.user
+
+# personal list
+SourceCode/
