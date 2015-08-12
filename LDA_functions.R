@@ -7,7 +7,7 @@
 # https://www.cs.princeton.edu/~blei/papers/BleiNgJordan2003.pdf
 #
 
-library(MCMCpack)  # for dirichlet dist, alternative library(gtools)
+library(MCMCpack)  # for dirichlet dist, alternative is library(gtools)
 
 GenerateLDA <- function(alpha, beta, xi, Vocab, Ndoc){
   # function to generate a single document
@@ -18,6 +18,8 @@ GenerateLDA <- function(alpha, beta, xi, Vocab, Ndoc){
   #   Vocab, vector of size V containing all possible words
   #   ndoc, number of documents to simulate
   #
+  # todo:
+  #   change output to document term matrix rather than list....
   
   k <- nrow(beta)
   alpha <- rep(alpha, k)
@@ -25,23 +27,23 @@ GenerateLDA <- function(alpha, beta, xi, Vocab, Ndoc){
   if(dim(beta)[2] != length(Vocab))
     stop("Incorrect dimension for Beta!!")
   
-  w <- list()  # blank list to store words, documents diff size so using an array is not suitable
+  docs <- list()  # blank list to store words, documents diff size so using an array is not suitable. Could use DTM alternatively...
 
   for(i in 1:Ndoc){
     N <- rpois(1, lambda = xi)  # Choose the length of the ith doc
     theta <- rdirichlet(n = 1, alpha = alpha)
     
     z <- rmultinom(1, 1, prob = theta)  # Choose a topic for 1st word in doc i
-    phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])
-    w[[i]] <- Vocab[which(rmultinom(1, 1, prob = phi) == 1)]  # Initialise the ith item in the list w
+    phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])  # generate probs for the word
+    docs[[i]] <- Vocab[which(rmultinom(1, 1, prob = phi) == 1)]  # Initialise the ith item in the list docs
     
     for(j in 1:N){
-      z <- rmultinom(1, 1, prob = theta)  
+      z <- rmultinom(1, 1, prob = theta)  # Choose a topic for jth word in doc i  
       phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])
-      w[[i]] <- c(w[[i]], Vocab[which(rmultinom(1, 1, prob = phi) == 1)])
+      docs[[i]] <- c(docs[[i]], Vocab[which(rmultinom(1, 1, prob = phi) == 1)])
     }
   }
-  w
+  docs
 }
 
 
@@ -80,22 +82,26 @@ VariationalExpectationFull <- function(alpha, beta, dtm, epsilon = 0.1){
   # Expectation step of EM alg
   #
   # arguments:
-  #   alpha
-  #   beta
+  #   alpha, vector of size topics
+  #   beta, array size topics X words
   #   dtm, document term matrix
+  #   epsilon, value for convergence test, smaller = stricter
+  #
+  # output:
+  #   list where the ith element contains values of gamma and phi for the ith document
   
   n_topics <- nrow(beta)
   n_docs <- nrow(dtm)
   output <- list()
   
-  pb <- txtProgressBar(min = 0, max = n_docs, style = 3)
+  pb <- txtProgressBar(min = 0, max = n_docs, style = 3)  # progress bar
   for(d in 1:n_docs){
     setTxtProgressBar(pb, d)
     n_words <- sum(dtm[d,] != 0)  # number of unique words
     alpha_temp <- alpha
-    beta_temp <- array(beta[,which(dtm[d,] != 0)] ,c(n_topics,n_words))
-    phi <- phi_new <- array(1 / n_topics, c(n_topics, n_words))
-    gamma <- gamma_new <- alpha_temp + (n_words / n_topics)
+    beta_temp <- array(beta[,which(dtm[d,] != 0)] ,c(n_topics,n_words))  # cut beta to only contain the columns for the words in doc d
+    phi <- phi_new <- array(1 / n_topics, c(n_topics, n_words))  # initalise phi
+    gamma <- gamma_new <- alpha_temp + (n_words / n_topics)  # initialise gamma
     conv_test <- epsilon + 1
 
     while(conv_test > epsilon){
@@ -134,11 +140,12 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   while(conv_test > epsilon){
     # For the following Newton-Rhapson algorithm see pages 1018-1022 in Blei
     # g is the gradient, z and h relate to the Hessian, all on page 1022
-    # H_inv is from a formula on page 1018/1019
+    # H_inv is from a formula on pages 1018/1019
+    
     g <- length(variational_para) * (digamma(sum(alpha)) - digamma(alpha)) + 
       colSums(matrix(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(sum(x$gamma)))), 
                      ncol = n_topics, byrow = T))
-  # alpha_dash_dash <- diag(length(variational_para) * trigamma(alpha)) - array(trigamma(sum(alpha)), c(n_topics, n_topics))
+    
     z <- trigamma(sum(alpha))
     h <- length(variational_para) * trigamma(alpha)
     c <- sum(g / h) / (1 / z + sum(1 / h))
@@ -165,6 +172,7 @@ EM_LDA <- function(dtm, n_topics = 2, epsilon = 0.1){
                   beta = array(0.5,c(n_topics, n_terms)))
   
   for(i in 1:20){
+    # for loop while debugging, should be changed to convergence test
     expect <- VariationalExpectationFull(alpha = maximum$alpha, beta = maximum$beta, dtm = dtm, epsilon = epsilon)
     maximum <- VariationalMaximization(variational_para = expect, dtm = dtm, epsilon = epsilon)
     print(max(maximum$beta))  # Debugging
