@@ -134,11 +134,10 @@ VariationalMaximization <- function(variational_para, dtm, epsilon = 0.1){
   for(d in 1:nrow(dtm)){
     # debugging: I'm happy with this update of beta being correct!
     for(i in 1:n_topics)
-      beta[i,which(dtm[d,]!=0)] <- beta[i,which(dtm[d,]!=0)] + exp(variational_para[[d]]$phi[i,])  # * dtm[d,which(dtm[d,]!=0)])
+      beta[i,which(dtm[d,]!=0)] <- beta[i,which(dtm[d,]!=0)] + exp(variational_para[[d]]$phi[i,])  # * dtm[d,which(dtm[d,]!=0)]
   }
   
-  alpha <- 0.1  # initialise alpha
-  log_alpha <- log(alpha)
+  log_alpha <- log(alpha <- 0.1)  # initialise alpha
   conv_test <- 1
   gradient_constant <- sum(unlist(lapply(variational_para, function(x) digamma(x$gamma) - digamma(n_topics * x$gamma))))
   
