@@ -11,6 +11,7 @@
 
 source('lda_functions.R')
 
+
 # ---------------- Generating a corpus
 
 my_vocab <- c("car", "engine", "exhaust", "wheel",
@@ -43,3 +44,19 @@ maximum <- VariationalMaximization(variational_para = expect, dtm = my_dtm)
 
 combined <- EM_LDA(my_dtm, n_topics = 3, epsilon = 0.1)
 maximum
+
+# ---------------- Gibbs
+my_dtm <- DocumentTermMatrix(Corpus(VectorSource(my_corpus)))
+my_z <- sample(1:3,size=length(my_dtm$i),replace=T)
+my_lambda<-my_beta
+for(i in 1:n_topics)
+  my_lambda[i,] <- rdirichlet(1,my_beta[i,])
+
+test_counts <- my_topic_counts(my_dtm, my_z)
+topic_and_doc_lik(alpha = c(1,1,1), lambda = my_lambda, word_counts = test_counts[[1]], doc_counts=test_counts[[2]])
+
+my_new_lambda <- matrix(optim(fn = topic_and_doc_nloglik_optim, par = c(1, 1, 1, my_lambda), n_topic = 3, word_counts = test_counts[[1]], doc_counts=test_counts[[2]])$par,nrow=3)
+
+gibbs_test <- my_lda_gibbs(my_dtm, n_topic = 3, iterations = 200)
+gibbs_test[[1]][30,,]
+plot(gibbs_test[[1]][,1,1], type = "l")
