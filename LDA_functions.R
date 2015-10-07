@@ -32,15 +32,16 @@ GenerateLDA <- function(alpha, beta, xi, Vocab, Ndoc){
   for(i in 1:Ndoc){
     N <- rpois(1, lambda = xi)  # Choose the length of the ith doc
     theta <- rdirichlet(n = 1, alpha = alpha)
+    phi <- array(0,c(k,length(Vocab)))
+    for(j in 1:k)
+      phi[j,] <- rdirichlet(n = 1, alpha = beta[j,])  # generate probs for the word
     
     z <- rmultinom(1, 1, prob = theta)  # Choose a topic for 1st word in doc i
-    phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])  # generate probs for the word
-    docs[[i]] <- Vocab[which(rmultinom(1, 1, prob = phi) == 1)]  # Initialise the ith item in the list docs
-    
-    for(j in 1:N){
+    docs[[i]] <- Vocab[which(rmultinom(1, 1, prob = phi[which(z == 1),]) == 1)]  # Initialise the ith item in the list docs
+    for(j in 2:N){
       z <- rmultinom(1, 1, prob = theta)  # Choose a topic for jth word in doc i  
-      phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])
-      docs[[i]] <- c(docs[[i]], Vocab[which(rmultinom(1, 1, prob = phi) == 1)])
+      #phi <- rdirichlet(n = 1, alpha = beta[which(z == 1),])
+      docs[[i]] <- c(docs[[i]], Vocab[which(rmultinom(1, 1, prob = phi[which(z == 1),]) == 1)])
     }
   }
   docs
